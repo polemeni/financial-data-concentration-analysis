@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.analyzer.router import router as analyzer_router
 
-app = FastAPI(title="Finance POC Backend")
+app = FastAPI(title="Financial Data Concentration Analysis Backend")
 
 # Add CORS middleware to allow frontend requests
 app.add_middleware(
@@ -12,10 +13,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/api/health")
+# Include the API routes
+app.include_router(analyzer_router, prefix="/api")
+
+@app.get("/")
+async def root():
+    return {"message": "Financial Data Concentration Analysis API"}
+
+@app.get("/health")
 async def health_check():
     return {"status": "ok", "message": "FastAPI backend running!"}
 
-@app.get("/api/test")
-async def test_endpoint():
-    return {"message": "Hello World!"}
+

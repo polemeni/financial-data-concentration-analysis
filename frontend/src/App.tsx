@@ -26,6 +26,7 @@ function App() {
   }
 
   return (
+    <>
     <div className="app">
       <h1>Financial Data Analysis</h1>
       <div className="card">
@@ -51,6 +52,7 @@ function App() {
         )}
       </div>
     </div>
+    </>
   )
 }
 

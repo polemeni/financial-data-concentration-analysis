@@ -5,6 +5,8 @@ interface AnalysisResponse {
   message: string
   data_shape: [number, number] | null
   columns: string[] | null
+  numerical_columns: string[] | null
+  categorical_columns: string[] | null
 }
 
 function App() {
@@ -98,12 +100,23 @@ function App() {
                 </>
               )}
             </div>
-            
-            {analysisData.columns && analysisData.columns.length > 0 && (
+            {analysisData.categorical_columns && analysisData.categorical_columns && analysisData.categorical_columns.length > 0 && (
               <div className="columns-info">
-                <h4>Columns:</h4>
+                <h4>Categorical Columns:</h4>
                 <div className="columns-grid">
-                  {analysisData.columns.map((col, index) => (
+                  {analysisData.categorical_columns.map((col, index) => (
+                    <div key={index} className="column-item">
+                      <span className="column-name">{col}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {analysisData.numerical_columns && analysisData.numerical_columns && analysisData.numerical_columns.length > 0 && (
+              <div className="columns-info">
+                <h4>Numerical Columns:</h4>
+                <div className="columns-grid">
+                  {analysisData.numerical_columns.map((col, index) => (
                     <div key={index} className="column-item">
                       <span className="column-name">{col}</span>
                     </div>

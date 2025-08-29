@@ -1,6 +1,6 @@
 import pandas as pd
-from typing import Optional
 import io
+from fastapi import UploadFile
 
 
 class Analyzer:
@@ -8,7 +8,7 @@ class Analyzer:
     Service class for analyzing financial data from uploaded files.
     """
     
-    def __init__(self, uploaded_file):
+    def __init__(self, uploaded_file: UploadFile):
         """
         Initialize the Analyzer with an uploaded file.
         
@@ -16,10 +16,22 @@ class Analyzer:
             uploaded_file: The uploaded file object from FastAPI
         """
         self.uploaded_file = uploaded_file
-        self.data: Optional[pd.DataFrame] = None
-        #self._load_data()
+        self.df = self._build_dataframe()
     
-    def _load_data(self):
+    def analyze(self):
+        """
+        Analyze the loaded data.
+        Currently does nothing as requested.
+        
+        Returns:
+            dict: Analysis results (empty for now)
+        """
+        return self._detect_schemas()
+        # self._normalize_data()
+        # self._perform_concentration_analysis()
+
+    # ================ PRIVATE METHODS ================
+    def _build_dataframe(self) -> pd.DataFrame:
         """
         Load the uploaded file into a pandas DataFrame.
         Supports Excel (.xlsx, .xls) and CSV files.
@@ -30,38 +42,41 @@ class Analyzer:
             
             # Determine file type and load accordingly
             filename = self.uploaded_file.filename.lower()
+
+            print(f"Filename: {filename}")
             
             if filename.endswith(('.xlsx', '.xls')):
-                self.data = pd.read_excel(io.BytesIO(file_content))
+                df = pd.read_excel(io.BytesIO(file_content))
             elif filename.endswith('.csv'):
-                self.data = pd.read_csv(io.BytesIO(file_content))
+                df = pd.read_csv(io.BytesIO(file_content))
             else:
                 raise ValueError(f"Unsupported file type: {filename}")
+            
+            return df
                 
         except Exception as e:
             raise ValueError(f"Error loading file: {str(e)}")
-    
-    def analyze(self):
-        """
-        Analyze the loaded data.
-        Currently does nothing as requested.
-        
-        Returns:
-            dict: Analysis results (empty for now)
-        """
-        self._detect_schemas()
-        self._normalize_data()
-        self._perform_concentration_analysis()
 
-    # ================ PRIVATE METHODS ================
     def _detect_schemas(self):
         """
         Determines data type of each column in the data.
         """
-        # TODO: Implement actual schema detection logic
+
+        numerical_columns = self.df.select_dtypes(include=['int', 'float', 'float64']).columns
+        categorical_columns = self.df.select_dtypes(include=['object']).columns
+
+        # Convert categorical columns to string type for better memory usage
+        self.df[categorical_columns] = self.df[categorical_columns].astype(str)
+
+        print(f"Numerical columns: {numerical_columns}")
+        print(f"Categorical columns: {categorical_columns}")
+
         return {
             "message": "Schema detection completed",
-            "schema": self.data.dtypes.to_dict()
+            "data_shape": list(self.df.shape),
+            "columns": list(self.df.columns),
+            "numerical_columns": list(numerical_columns),
+            "categorical_columns": list(categorical_columns)
         }
     
     def _normalize_data(self):

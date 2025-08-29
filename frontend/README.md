@@ -13,7 +13,7 @@ This is the frontend application for the Financial Data Concentration Analysis p
 
 The frontend communicates with the FastAPI backend at `http://localhost:8000`:
 
-- **POST** `/api/analyze` - Upload and analyze financial data files
+- **POST** `/api/scan-file` - Upload and analyze financial data files
 - **GET** `/health` - Health check endpoint
 
 ## Development

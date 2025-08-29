@@ -16,7 +16,7 @@ This project is containerized for easy local development using Docker Compose.
 1. **Clone the repository**
 
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/polemeni/financial-data-concentration-analysis
    cd financial-data-concentration-analysis
    ```
 

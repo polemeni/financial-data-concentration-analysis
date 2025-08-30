@@ -4,7 +4,6 @@ import {
   FileUpload,
   ColumnReclassification,
   ColumnSelection,
-  AnalysisResults,
   ErrorDisplay,
 } from './components';
 import TimeConcentrationAnalysis from './pages/TimeConcentrationAnalysis';
@@ -12,8 +11,6 @@ import TimeAnalysisResults from './pages/TimeAnalysisResults';
 import type {
   AnalysisResponse,
   ReclassifyColumnsRequest,
-  ConcentrationAnalysisRequest,
-  ConcentrationAnalysisResponse,
   TimeConcentrationAnalysisResponse,
   AppStep,
   ColumnType,
@@ -24,8 +21,7 @@ function App() {
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(
     null
   );
-  const [concentrationResults, setConcentrationResults] =
-    useState<ConcentrationAnalysisResponse | null>(null);
+
   const [timeAnalysisResults, setTimeAnalysisResults] =
     useState<TimeConcentrationAnalysisResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -33,9 +29,13 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Column selection state
-  const [selectedGroupByColumns, setSelectedGroupByColumns] = useState<
+  const [selectedTimeGroupByColumns, setSelectedTimeGroupByColumns] = useState<
     string[]
   >([]);
+  const [
+    selectedCategoricalGroupByColumns,
+    setSelectedCategoricalGroupByColumns,
+  ] = useState<string[]>([]);
   const [selectedAggregateColumns, setSelectedAggregateColumns] = useState<
     string[]
   >([]);
@@ -55,7 +55,6 @@ function App() {
       setSelectedFile(file);
       setError('');
       setAnalysisData(null);
-      setConcentrationResults(null);
       setCurrentStep('upload');
     }
   };
@@ -69,14 +68,14 @@ function App() {
     setLoading(true);
     setError('');
     setAnalysisData(null);
-    setConcentrationResults(null);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
+      console.log(`${import.meta.env.VITE_API_URL}/scan-file`);
       const response = await fetch(
-        `${import.meta.env.API_BASE_URL}/scan-file`,
+        `${import.meta.env.VITE_API_URL}/scan-file`,
         {
           method: 'POST',
           body: formData,
@@ -147,7 +146,7 @@ function App() {
       };
 
       const response = await fetch(
-        `${import.meta.env.API_BASE_URL}/reclassify-columns`,
+        `${import.meta.env.VITE_API_URL}/reclassify-columns`,
         {
           method: 'POST',
           headers: {
@@ -174,64 +173,11 @@ function App() {
     }
   };
 
-  const performConcentrationAnalysis = async () => {
-    if (
-      selectedGroupByColumns.length === 0 ||
-      selectedAggregateColumns.length === 0
-    ) {
-      setError(
-        'Please select at least one group by column and one aggregate column'
-      );
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    try {
-      const request: ConcentrationAnalysisRequest = {
-        group_by_columns: selectedGroupByColumns,
-        aggregate_columns: selectedAggregateColumns,
-      };
-
-      const response = await fetch(
-        `${import.meta.env.API_BASE_URL}/concentration-analysis`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.detail || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      const data: ConcentrationAnalysisResponse = await response.json();
-      setConcentrationResults(data);
-      setCurrentStep('results');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGroupByColumnToggle = (column: string) => {
-    setSelectedGroupByColumns(prev =>
-      prev.includes(column)
-        ? prev.filter(col => col !== column)
-        : [...prev, column]
-    );
-  };
-
-  const handleAggregateColumnToggle = (column: string) => {
-    setSelectedAggregateColumns(prev =>
+  const handleColumnToggle = (
+    column: string,
+    setGroups: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setGroups(prev =>
       prev.includes(column)
         ? prev.filter(col => col !== column)
         : [...prev, column]
@@ -241,10 +187,10 @@ function App() {
   const resetAnalysis = () => {
     setCurrentStep('upload');
     setAnalysisData(null);
-    setConcentrationResults(null);
     setTimeAnalysisResults(null);
     setSelectedFile(null);
-    setSelectedGroupByColumns([]);
+    setSelectedTimeGroupByColumns([]);
+    setSelectedCategoricalGroupByColumns([]);
     setSelectedAggregateColumns([]);
     setReclassifiedCategoricalColumns([]);
     setReclassifiedNumericalColumns([]);
@@ -253,10 +199,6 @@ function App() {
 
   const goBackToReclassify = () => {
     setCurrentStep('reclassify');
-  };
-
-  const goBackToColumnSelection = () => {
-    setCurrentStep('select');
   };
 
   const handleTimeAnalysisResults = (
@@ -305,22 +247,21 @@ function App() {
       {currentStep === 'select' && (
         <ColumnSelection
           analysisData={analysisData}
-          selectedGroupByColumns={selectedGroupByColumns}
+          selectedTimeGroupByColumns={selectedTimeGroupByColumns}
+          selectedCategoricalGroupByColumns={selectedCategoricalGroupByColumns}
           selectedAggregateColumns={selectedAggregateColumns}
           loading={loading}
-          onGroupByColumnToggle={handleGroupByColumnToggle}
-          onAggregateColumnToggle={handleAggregateColumnToggle}
+          onTimeGroupByColumnToggle={column =>
+            handleColumnToggle(column, setSelectedTimeGroupByColumns)
+          }
+          onCategoricalGroupByColumnToggle={column =>
+            handleColumnToggle(column, setSelectedCategoricalGroupByColumns)
+          }
+          onAggregateColumnToggle={column =>
+            handleColumnToggle(column, setSelectedAggregateColumns)
+          }
           onBackToReclassify={goBackToReclassify}
-          onPerformAnalysis={performConcentrationAnalysis}
-          onTimeAnalysis={goToTimeAnalysis}
-        />
-      )}
-
-      {currentStep === 'results' && (
-        <AnalysisResults
-          concentrationResults={concentrationResults}
-          onReset={resetAnalysis}
-          onTryDifferentGroupings={goBackToColumnSelection}
+          onPerformAnalysis={() => {}}
         />
       )}
 

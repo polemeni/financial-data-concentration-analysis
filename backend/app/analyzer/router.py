@@ -85,41 +85,6 @@ async def reclassify_columns(request: ReclassifyColumnsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
-@router.post("/concentration-analysis")
-async def perform_concentration_analysis(request: ConcentrationAnalysisRequest):
-    """
-    Perform concentration analysis based on user column selections.
-    
-    Args:
-        request: ConcentrationAnalysisRequest containing group_by_columns and aggregate_columns
-        
-    Returns:
-        dict: Concentration analysis results
-    """
-    try:
-        # Use the stored analyzer instance
-        global _current_analyzer
-        if _current_analyzer is None:
-            raise HTTPException(
-                status_code=400, 
-                detail="No file has been uploaded. Please upload a file first."
-            )
-        
-        analyzer = _current_analyzer
-        
-        # Perform concentration analysis
-        results = analyzer.perform_concentration_analysis(
-            request.group_by_columns, 
-            request.aggregate_columns
-        )
-        
-        return JSONResponse(content=results)
-        
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
 @router.post("/time-concentration-analysis")
 async def perform_time_concentration_analysis(request: TimeConcentrationAnalysisRequest):
     """

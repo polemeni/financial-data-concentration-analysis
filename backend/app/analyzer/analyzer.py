@@ -76,34 +76,6 @@ class Analyzer:
         except Exception as e:
             raise ValueError(f"Error reclassifying columns: {str(e)}")
 
-
-    def perform_concentration_analysis(
-        self, 
-        group_by_columns: List[str], 
-        aggregate_columns: List[str]
-    ) -> Dict[str, Any]:
-        """
-        Perform concentration analysis on the data.
-        
-        Args:
-            group_by_columns: List of categorical columns to group by
-            aggregate_columns: List of numerical columns to aggregate
-            
-        Returns:
-            dict: Concentration analysis results
-        """
-        try:
-            # Validate input columns
-            self._validate_columns(group_by_columns, aggregate_columns)
-            
-            # Perform the concentration analysis
-            results = self._calculate_concentration(group_by_columns, aggregate_columns)
-            
-            return results
-            
-        except Exception as e:
-            raise ValueError(f"Error in concentration analysis: {str(e)}")
-
     def perform_time_concentration_analysis(
         self, 
         time_columns: List[str], 
@@ -232,63 +204,6 @@ class Analyzer:
             if col not in all_columns:
                 raise ValueError(f"Aggregate column '{col}' not found in dataset")
     
-    def _calculate_concentration(
-        self, 
-        group_by_columns: List[str], 
-        aggregate_columns: List[str]
-    ) -> Dict[str, Any]:
-        """
-        Calculate concentration analysis for the specified columns.
-        """
-        # Group by the specified categorical columns
-        grouped = self.df.groupby(group_by_columns)
-        
-        # Calculate aggregations for each numerical column
-        aggregation_results = {}
-        for col in aggregate_columns:
-            agg_data = grouped[col].agg(['sum', 'count', 'mean', 'std']).reset_index()
-            # Convert to records and ensure JSON serializable
-            records = []
-            for _, row in agg_data.iterrows():
-                record = {}
-                for col_name in row.index:
-                    if col_name in group_by_columns:
-                        record[col_name] = str(row[col_name])
-                    else:
-                        record[col_name] = float(row[col_name]) if pd.notna(row[col_name]) else 0.0
-                records.append(record)
-            aggregation_results[col] = records
-        
-        # Calculate concentration metrics
-        concentration_metrics = {}
-        for col in aggregate_columns:
-            total_sum = self.df[col].sum()
-            total_count = len(self.df)
-            
-            # Calculate concentration by group
-            group_concentration = grouped[col].sum().sort_values(ascending=False)
-            
-            # Calculate 10, 20, 50 concentration
-            top_10_sum = group_concentration.head(10).sum()
-            top_20_sum = group_concentration.head(20).sum()
-            top_50_sum = group_concentration.head(50).sum()
-            
-            concentration_metrics[col] = {
-                'total_sum': float(total_sum),
-                'total_count': int(total_count),
-                'top_10_concentration': float((top_10_sum / total_sum * 100) if total_sum > 0 else 0),
-                'top_20_concentration': float((top_20_sum / total_sum * 100) if total_sum > 0 else 0),
-                'top_50_concentration': float((top_50_sum / total_sum * 100) if total_sum > 0 else 0),
-            }
-        
-        return {
-            "aggregation_results": aggregation_results,
-            "concentration_metrics": concentration_metrics,
-            "group_by_columns": group_by_columns,
-            "aggregate_columns": aggregate_columns,
-            "total_groups": len(grouped)
-        }
-
     def _calculate_time_concentration(self, time_columns: List[str], aggregate_columns: List[str], concentration_buckets: List[int]) -> Dict[str, Any]:
         """
         Calculate concentration analysis over time periods.

@@ -77,7 +77,7 @@ const TimeConcentrationAnalysis: React.FC<TimeConcentrationAnalysisProps> = ({
       };
 
       const response = await fetch(
-        `${import.meta.env.API_BASE_URL}/time-concentration-analysis`,
+        `${import.meta.env.VITE_API_URL}/time-concentration-analysis`,
         {
           method: 'POST',
           headers: {

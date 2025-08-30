@@ -14,23 +14,10 @@ export interface ReclassifyColumnsRequest {
   time_columns: string[];
 }
 
-export interface ConcentrationAnalysisRequest {
-  group_by_columns: string[];
-  aggregate_columns: string[];
-}
-
 export interface TimeConcentrationAnalysisRequest {
   time_columns: string[];
   aggregate_columns: string[];
   concentration_buckets?: number[];
-}
-
-export interface ConcentrationMetric {
-  total_sum: number;
-  total_count: number;
-  top_10_concentration: number;
-  top_20_concentration: number;
-  top_50_concentration: number;
 }
 
 export interface TimeConcentrationPeriod {
@@ -38,14 +25,6 @@ export interface TimeConcentrationPeriod {
   total_value: number;
   total_count: number;
   [key: string]: any; // For dynamic bucket properties like top_10%_value, top_20%_percentage, etc.
-}
-
-export interface ConcentrationAnalysisResponse {
-  aggregation_results: Record<string, any[]>;
-  concentration_metrics: Record<string, ConcentrationMetric>;
-  group_by_columns: string[];
-  aggregate_columns: string[];
-  total_groups: number;
 }
 
 export interface TimeConcentrationAnalysisResponse {

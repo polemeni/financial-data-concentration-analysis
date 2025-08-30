@@ -10,10 +10,7 @@ build/
 
 # Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
 
 # Logs
@@ -22,76 +19,14 @@ yarn-debug.log*
 yarn-error.log*
 *.log
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory
-coverage/
-*.lcov
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Parcel cache
-.cache
-.parcel-cache
-
-# Temporary folders
-tmp/
-temp/
 
 # Editor directories and files
 .vscode/
-.idea/
-*.swp
-*.swo
-*~
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# venv
+backend/venv/
+
+
 
 # Python
-backend/__pycache__/
-backend/app/__pycache__/
-backend/app/analyzer/__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-backend/venv/
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-
-# pipenv
-Pipfile.lock
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# VSCode
-.vscode/
+__pycache__/

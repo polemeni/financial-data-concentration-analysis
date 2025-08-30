@@ -1,7 +1,7 @@
 import pandas as pd
 import io
 from fastapi import UploadFile
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Union
 from .constants import COMMON_TIME_COLUMNS, DEFAULT_CONCENTRATION_BUCKETS
 
 class Analyzer:
@@ -29,6 +29,8 @@ class Analyzer:
         Returns:
             dict: Column information including numerical and categorical columns
         """
+        # Clean data
+        self._clean_data()
         # TODO: Perform anomaly detection
         # self._detect_anomalies()
         schemas = self._identify_schemas()
@@ -110,6 +112,12 @@ class Analyzer:
             raise ValueError(f"Error in time concentration analysis: {str(e)}")
 
     # ================ PRIVATE METHODS ================
+    def _clean_data(self) -> None:
+        """
+        Clean the data.
+        """
+        self.df = self.df.dropna()
+    
     def _build_dataframe(self) -> pd.DataFrame:
         """
         Load the uploaded file into a pandas DataFrame.
@@ -204,184 +212,119 @@ class Analyzer:
             if col not in all_columns:
                 raise ValueError(f"Aggregate column '{col}' not found in dataset")
     
-    def _calculate_time_concentration(self, time_columns: List[str], aggregate_columns: List[str], concentration_buckets: List[int]) -> Dict[str, Any]:
+
+    def _calculate_time_concentration(
+        self, 
+        time_columns: List[str], 
+        aggregate_columns: List[str], 
+        concentration_buckets: List[int]
+    ) -> Dict[str, Any]:
         """
         Calculate concentration analysis over time periods.
         """
-        # Create a copy of the dataframe to work with
-        df_work = self.df.copy()
-        
-        # Convert time columns to datetime if they aren't already
-        for col in time_columns:
-            if col in df_work.columns:
-                try:
-                    # Only convert to datetime if it's not already a string and looks like a date
-                    if df_work[col].dtype == 'object':
-                        # Check if the column contains date-like strings (but not quarter strings like "Q1-2020")
-                        sample_values = df_work[col].dropna().head()
-                        if len(sample_values) > 0:
-                            # Skip conversion if it looks like quarter format (Q1-2020, Q2-2021, etc.)
-                            if not any(str(val).startswith('Q') and '-' in str(val) for val in sample_values):
-                                # Only convert if it looks like a real date
-                                if any('/' in str(val) or (len(str(val)) == 10 and '-' in str(val)) for val in sample_values):
-                                    df_work[col] = pd.to_datetime(df_work[col], errors='coerce')
-                except Exception as e:
-                    print(f"Warning: Could not convert column {col} to datetime: {str(e)}")
-        
-        # Create combined time period column
-        time_period_col = '_time_period'
-        if len(time_columns) == 1:
-            # For single time column, use the original column value
-            col = time_columns[0]
-            if pd.api.types.is_datetime64_any_dtype(df_work[col]):
-                # If it's already datetime, format it nicely
-                df_work[time_period_col] = df_work[col].dt.strftime('%Y-%m-%d')
-            else:
-                # Otherwise, convert to string - handle categorical columns
-                if df_work[col].dtype.name == 'category':
-                    df_work[time_period_col] = df_work[col].astype(str)
-                else:
-                    df_work[time_period_col] = df_work[col].astype(str)
-        else:
-            # Combine multiple time columns into a single period
-            df_work[time_period_col] = df_work[time_columns].apply(
-                lambda row: '_'.join([str(row[col]) for col in time_columns if pd.notna(row[col])]), 
-                axis=1
-            )
-        
-        # Remove rows where time period is null
-        df_work = df_work.dropna(subset=[time_period_col])
-        
-        # Group by time period
-        grouped = df_work.groupby(time_period_col)
-        
-        # Calculate concentration for each time period and aggregate column
-        concentration_data = {}
-        time_periods = []
-        
-        for agg_col in aggregate_columns:
-            concentration_data[agg_col] = []
-            
-            for time_period, group_data in grouped:
-                if time_period not in time_periods:
-                    time_periods.append(time_period)
-                
-                # Calculate total for this time period
-                total_value = group_data[agg_col].sum()
-                total_count = len(group_data)
-                
-                if total_value <= 0:
-                    # Skip periods with no data
-                    continue
-                
-                # Sort by the aggregate column in descending order
-                sorted_data = group_data.sort_values(agg_col, ascending=False)
-                
-                # Calculate concentration for each bucket
-                period_concentration = {
-                    'time_period': str(time_period),
-                    'total_value': float(total_value),
-                    'total_count': int(total_count)
-                }
-                
-                for bucket in concentration_buckets:
-                    # Calculate how many items represent this percentage
-                    bucket_count = max(1, int((bucket / 100) * total_count))
-                    bucket_value = sorted_data[agg_col].head(bucket_count).sum()
-                    bucket_percentage = (bucket_value / total_value * 100) if total_value > 0 else 0
-                    
-                    period_concentration[f'top_{bucket}%_value'] = float(bucket_value)
-                    period_concentration[f'top_{bucket}%_count'] = int(bucket_count)
-                    period_concentration[f'top_{bucket}%_percentage'] = float(bucket_percentage)
-                
-                concentration_data[agg_col].append(period_concentration)
-        
-        # Sort time periods chronologically if possible
-        try:
-            # Try to sort chronologically by parsing the time periods
-            def parse_time_period(period_str):
-                """Parse time period string to get a sortable value"""
-                period_str = str(period_str)
-                
-                # Handle quarter format: Q1-2020, Q2-2021, etc.
-                if period_str.startswith('Q') and '-' in period_str:
-                    quarter, year = period_str.split('-')
-                    quarter_num = int(quarter[1])  # Extract number from Q1, Q2, etc.
-                    return (int(year), quarter_num)
-                
-                # Handle year_month format: 2020_1, 2020_10, etc.
-                if '_' in period_str:
-                    try:
-                        year, month = period_str.split('_')
-                        return (int(year), int(month))
-                    except:
-                        pass
-                
-                # Handle year-month format: 2020-01, 2020-10, etc.
-                if '-' in period_str and len(period_str) >= 7:
-                    try:
-                        year, month = period_str.split('-')[:2]
-                        return (int(year), int(month))
-                    except:
-                        pass
-                
-                # Handle year format: 2020, 2021, etc.
-                try:
-                    return (int(period_str), 0)
-                except:
-                    pass
-                
-                # Fallback to string sorting
-                return period_str
-            
-            # Sort using the parsing function
-            time_periods.sort(key=parse_time_period)
-        except Exception as e:
-            # If sorting fails, keep original order
-            print(f"Warning: Could not sort time periods chronologically: {str(e)}")
-            pass
-        
-        # Format time periods for better display
-        def format_time_period(period_str):
-            """Format time period string for better display"""
-            period_str = str(period_str)
-            
-            # Handle year_month format: 2020_1, 2020_10, etc.
-            if '_' in period_str:
-                try:
-                    year, month = period_str.split('_')
-                    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                    month_name = month_names[int(month) - 1]
-                    return f"{month_name} {year}"
-                except:
-                    pass
-            
-            # Handle quarter format: Q1-2020, Q2-2021, etc.
-            if period_str.startswith('Q') and '-' in period_str:
-                return period_str  # Keep as is, it's already readable
-            
-            # Handle year-month format: 2020-01, 2020-10, etc.
-            if '-' in period_str and len(period_str) >= 7:
-                try:
-                    year, month = period_str.split('-')[:2]
-                    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                    month_name = month_names[int(month) - 1]
-                    return f"{month_name} {year}"
-                except:
-                    pass
-            
-            # Return as is for other formats
-            return period_str
-        
-        formatted_time_periods = [format_time_period(tp) for tp in time_periods]
-        
+        df = self.df.copy()
+
+        # Step 0: Clean data - normalize time columns
+        df = self._normalize_time_columns(df, time_columns)
+
+        # Step 1: Build canonical time period column
+        time_period_col = self._build_time_period_column(df, time_columns)
+
+        # Step 2: Group by time period
+        grouped = df.groupby(time_period_col)
+
+        # Step 3: Calculate concentration data
+        concentration_data, time_periods = self._calculate_concentration_for_groups(
+            grouped, aggregate_columns, concentration_buckets
+        )
+
+        # Step 4: Chronologically sort + format time periods
+        time_periods = self._sort_time_periods(time_periods)
+
         return {
-            "time_periods": formatted_time_periods,
+            "time_periods": time_periods,
             "concentration_data": concentration_data,
             "time_columns": time_columns,
             "aggregate_columns": aggregate_columns,
             "concentration_buckets": concentration_buckets,
-            "total_periods": len(time_periods)
+            "total_periods": len(time_periods),
         }
+
+    def _normalize_time_columns(self, df: pd.DataFrame, time_columns: List[str]) -> pd.DataFrame:
+        """Normalize time columns."""
+
+        # Add leading zeros to single digit months and days
+        for col in time_columns:
+            if col in df.columns:
+                df[col] = df[col].astype(str)
+                df[col] = df[col].str.zfill(2)
+        return df
+
+    def _build_time_period_column(self, df: pd.DataFrame, time_columns: List[str]) -> str:
+        """Create a time period column from one or more time columns."""
+
+        # If there is only one time column, use it as the time period column
+        if len(time_columns) == 1:
+            col = time_columns[0]
+            if pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = df[col].dt.strftime("%Y-%m-%d")
+            else:
+                df[col] = df[col].astype(str)
+            return col
+
+        # Multiple columns → join into string like "2020_1" or "2020_Q1"
+        df["_time_period"] = df[time_columns].apply(
+            lambda row: "_".join(str(row[col]) for col in time_columns),
+            axis=1,
+        )
+        return "_time_period"
+
+    def _calculate_concentration_for_groups(
+        self,
+        grouped: pd.core.groupby.DataFrameGroupBy,
+        aggregate_columns: List[str],
+        concentration_buckets: List[int],
+    ) -> Tuple[Dict[str, List[Dict[str, Any]]], List[str]]:
+        """Calculate concentration for each group of time period."""
+        concentration_data = {}
+        time_periods = []
+
+        for agg_col in aggregate_columns:
+            concentration_data[agg_col] = []
+
+            for time_period, group_data in grouped:
+                if time_period not in time_periods:
+                    time_periods.append(time_period)
+
+                total_value = group_data[agg_col].sum()
+                total_count = len(group_data)
+                if total_value <= 0:
+                    continue
+
+                sorted_data = group_data.sort_values(agg_col, ascending=False)
+
+                period_data = {
+                    "time_period": str(time_period),
+                    "total_value": float(total_value),
+                    "total_count": int(total_count),
+                }
+
+                for bucket in concentration_buckets:
+                    bucket_count = max(1, int((bucket / 100) * total_count))
+                    bucket_value = sorted_data[agg_col].head(bucket_count).sum()
+                    bucket_pct = (bucket_value / total_value * 100) if total_value > 0 else 0
+
+                    period_data[f"top_{bucket}%_value"] = float(bucket_value)
+                    period_data[f"top_{bucket}%_count"] = int(bucket_count)
+                    period_data[f"top_{bucket}%_percentage"] = float(bucket_pct)
+
+                concentration_data[agg_col].append(period_data)
+
+        return concentration_data, time_periods
+
+    # TODO: Create a more robust sorting function
+    def _sort_time_periods(self, time_periods: List[str]) -> List[str]:
+        """Sort time periods chronologically"""
+        return sorted(time_periods)
+
+ 

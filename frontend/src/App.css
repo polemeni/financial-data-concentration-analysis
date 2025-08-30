@@ -180,6 +180,10 @@
   margin-bottom: 30px;
 }
 
+.selection-grid .column-selection:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
 .column-selection {
   background: #f8f9fa;
   padding: 15px;
@@ -196,6 +200,12 @@
 .columns-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.concentration-buckets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
 }
 

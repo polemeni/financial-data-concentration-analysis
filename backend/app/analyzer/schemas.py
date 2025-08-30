@@ -5,7 +5,7 @@ from fastapi import UploadFile
 class AnalysisRequest(BaseModel):
     file: UploadFile
 
-class AnalysisResponse(BaseModel):
+class ScanFileResponse(BaseModel):
     results: dict
 
 class ConcentrationAnalysisRequest(BaseModel):

@@ -1,27 +1,26 @@
 import { useState } from 'react';
 import './App.css';
-import {
-  FileUpload,
-  ColumnReclassification,
-  ColumnSelection,
-  ErrorDisplay,
-} from './components';
+import { FileUpload, ColumnReclassification, ErrorDisplay } from '.';
 import TimeConcentrationAnalysis from './pages/TimeConcentrationAnalysis';
 import TimeAnalysisResults from './pages/TimeAnalysisResults';
 import type {
-  AnalysisResponse,
+  ScanFileResponse,
   ReclassifyColumnsRequest,
   TimeConcentrationAnalysisResponse,
   AppStep,
-  ColumnType,
-} from './types';
+  ColumnClassification,
+} from './types/types';
+const COLUMN_CLASSIFICATIONS: ColumnClassification[] = [
+  'categorical',
+  'numerical',
+  'time',
+];
 
 function App() {
   const [currentStep, setCurrentStep] = useState<AppStep>('upload');
-  const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(
+  const [scanFileData, setScanFileData] = useState<ScanFileResponse | null>(
     null
   );
-
   const [timeAnalysisResults, setTimeAnalysisResults] =
     useState<TimeConcentrationAnalysisResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,16 +48,23 @@ function App() {
     string[]
   >([]);
 
+  /**
+   * Handles file selection
+   * @param event - The file input event
+   */
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setError('');
-      setAnalysisData(null);
+      setScanFileData(null);
       setCurrentStep('upload');
     }
   };
 
+  /**
+   * Uploads file to scan-file endpoint
+   */
   const uploadFile = async () => {
     if (!selectedFile) {
       setError('Please select a file first');
@@ -67,13 +73,12 @@ function App() {
 
     setLoading(true);
     setError('');
-    setAnalysisData(null);
+    setScanFileData(null);
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      console.log(`${import.meta.env.VITE_API_URL}/scan-file`);
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/scan-file`,
         {
@@ -89,8 +94,8 @@ function App() {
         );
       }
 
-      const data: AnalysisResponse = await response.json();
-      setAnalysisData(data);
+      const data: ScanFileResponse = await response.json();
+      setScanFileData(data);
 
       // Initialize reclassification state with detected columns
       setReclassifiedCategoricalColumns(data.categorical_columns || []);
@@ -105,12 +110,17 @@ function App() {
     }
   };
 
+  /**
+   * Handles column reclassification
+   * @param column - The column to reclassify
+   * @param newClassification - The new classification of the column
+   */
   const handleColumnReclassification = (
     column: string,
-    newType: ColumnType
+    newClassification: ColumnClassification
   ) => {
     const setters: Record<
-      ColumnType,
+      ColumnClassification,
       React.Dispatch<React.SetStateAction<string[]>>
     > = {
       categorical: setReclassifiedCategoricalColumns,
@@ -118,12 +128,10 @@ function App() {
       time: setReclassifiedTimeColumns,
     };
 
-    const allTypes: ColumnType[] = ['categorical', 'numerical', 'time'];
-
-    allTypes.forEach(type => {
-      setters[type](
+    COLUMN_CLASSIFICATIONS.forEach(classification => {
+      setters[classification](
         prev =>
-          type === newType
+          classification === newClassification
             ? prev.includes(column)
               ? prev
               : [...prev, column] // add if missing
@@ -132,8 +140,11 @@ function App() {
     });
   };
 
-  const reclassifyColumns = async () => {
-    if (!analysisData) return;
+  /**
+   * Reclassifies columns
+   */
+  const onSubmitReclassifications = async () => {
+    if (!scanFileData) return;
 
     setLoading(true);
     setError('');
@@ -163,9 +174,9 @@ function App() {
         );
       }
 
-      const data: AnalysisResponse = await response.json();
-      setAnalysisData(data);
-      setCurrentStep('select');
+      const data: ScanFileResponse = await response.json();
+      setScanFileData(data);
+      setCurrentStep('analyze');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -186,7 +197,7 @@ function App() {
 
   const resetAnalysis = () => {
     setCurrentStep('upload');
-    setAnalysisData(null);
+    setScanFileData(null);
     setTimeAnalysisResults(null);
     setSelectedFile(null);
     setSelectedTimeGroupByColumns([]);
@@ -205,15 +216,11 @@ function App() {
     results: TimeConcentrationAnalysisResponse
   ) => {
     setTimeAnalysisResults(results);
-    setCurrentStep('time-results');
-  };
-
-  const goToTimeAnalysis = () => {
-    setCurrentStep('time-analysis');
+    setCurrentStep('analysis-results');
   };
 
   const goBackToTimeAnalysisSetup = () => {
-    setCurrentStep('select');
+    setCurrentStep('analyze');
   };
 
   return (
@@ -233,20 +240,20 @@ function App() {
 
       {currentStep === 'reclassify' && (
         <ColumnReclassification
-          analysisData={analysisData}
+          scanFileData={scanFileData}
           reclassifiedCategoricalColumns={reclassifiedCategoricalColumns}
           reclassifiedNumericalColumns={reclassifiedNumericalColumns}
           reclassifiedTimeColumns={reclassifiedTimeColumns}
           loading={loading}
-          onColumnReclassification={handleColumnReclassification}
-          onReclassify={reclassifyColumns}
+          handleColumnReclassification={handleColumnReclassification}
+          onSubmitReclassifications={onSubmitReclassifications}
           onReset={resetAnalysis}
         />
       )}
 
-      {currentStep === 'select' && (
-        <ColumnSelection
-          analysisData={analysisData}
+      {currentStep === 'analyze' && (
+        <TimeConcentrationAnalysis
+          scanFileData={scanFileData}
           selectedTimeGroupByColumns={selectedTimeGroupByColumns}
           selectedCategoricalGroupByColumns={selectedCategoricalGroupByColumns}
           selectedAggregateColumns={selectedAggregateColumns}
@@ -260,20 +267,12 @@ function App() {
           onAggregateColumnToggle={column =>
             handleColumnToggle(column, setSelectedAggregateColumns)
           }
-          onBackToReclassify={goBackToReclassify}
-          onPerformAnalysis={() => {}}
-        />
-      )}
-
-      {currentStep === 'time-analysis' && analysisData && (
-        <TimeConcentrationAnalysis
-          analysisData={analysisData}
+          onBack={goBackToReclassify}
           onResults={handleTimeAnalysisResults}
-          onBack={goBackToTimeAnalysisSetup}
         />
       )}
 
-      {currentStep === 'time-results' && timeAnalysisResults && (
+      {currentStep === 'analysis-results' && timeAnalysisResults && (
         <TimeAnalysisResults
           results={timeAnalysisResults}
           onBack={goBackToTimeAnalysisSetup}

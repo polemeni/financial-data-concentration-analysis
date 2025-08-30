@@ -1,4 +1,4 @@
-export interface AnalysisResponse {
+export interface ScanFileResponse {
   message: string;
   data_shape: [number, number] | null;
   columns: string[] | null;
@@ -39,9 +39,9 @@ export interface TimeConcentrationAnalysisResponse {
 export type AppStep =
   | 'upload'
   | 'reclassify'
-  | 'select'
+  | 'analyze'
   | 'results'
   | 'time-analysis'
-  | 'time-results';
+  | 'analysis-results';
 
-export type ColumnType = 'categorical' | 'numerical' | 'time';
+export type ColumnClassification = 'categorical' | 'numerical' | 'time';

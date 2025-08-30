@@ -9,21 +9,26 @@ The application follows a four-step process:
 ### Step 1: File Upload
 - User uploads an Excel (.xlsx, .xls) or CSV file containing financial data
 - The server analyzes the file and identifies numerical, categorical and time columns
+<img width="537" height="258" alt="Pasted Graphic" src="https://github.com/user-attachments/assets/778fb0f2-784b-4920-80cf-2639b1cf0f04" />
 
 ### Step 2: Column Reclassification (Optional)
 - User reviews automatically detected column types
 - User can reclassify columns if needed (e.g., numerical codes that should be categorical)
 - This step is crucial for data with mixed types like industry codes, region codes, etc.
+<img width="335" height="536" alt="Pasted Graphic 1" src="https://github.com/user-attachments/assets/a9c265ad-98fd-454e-85da-68a3baee9d3e" />
 
 ### Step 3: Column Selection
 - User selects which categorical columns to group by (e.g., Industry, Region, Company)
 - User selects which time columns to group by (e.g., quarter, month, year, or a combination thereof)
 - User selects which numerical columns to analyze for concentration (e.g., Revenue, Assets, Employees)
 - User selects concentration buckets (e.g., 10, 20, 50)
+<img width="576" height="454" alt="Pasted Graphic 3" src="https://github.com/user-attachments/assets/15c27d1c-3048-41f1-942c-5b730e3c8c52" />
+
 
 ### Step 4: Concentration Analysis Results
 - The server performs concentration analysis and displays results in a tabular format
 - User can go back and select different configurations, or upload a new file
+<img width="577" height="436" alt="Pasted Graphic 4" src="https://github.com/user-attachments/assets/d61b1d5e-10c6-4cee-b980-7c1be3fc696d" />
 
 ## Installation & Setup
 

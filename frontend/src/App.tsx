@@ -75,10 +75,13 @@ function App() {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:8000/api/scan-file', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${import.meta.env.API_BASE_URL}/scan-file`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -144,7 +147,7 @@ function App() {
       };
 
       const response = await fetch(
-        'http://localhost:8000/api/reclassify-columns',
+        `${import.meta.env.API_BASE_URL}/reclassify-columns`,
         {
           method: 'POST',
           headers: {
@@ -192,7 +195,7 @@ function App() {
       };
 
       const response = await fetch(
-        'http://localhost:8000/api/concentration-analysis',
+        `${import.meta.env.API_BASE_URL}/concentration-analysis`,
         {
           method: 'POST',
           headers: {

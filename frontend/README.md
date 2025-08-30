@@ -9,13 +9,6 @@ This is the frontend application for the Financial Data Concentration Analysis p
 - Responsive design with modern UI
 - Error handling and loading states
 
-## API Integration
-
-The frontend communicates with the FastAPI backend at `http://localhost:8000`:
-
-- **POST** `/api/scan-file` - Upload and analyze financial data files
-- **GET** `/health` - Health check endpoint
-
 ## Development
 
 ### Prerequisites
@@ -26,11 +19,13 @@ The frontend communicates with the FastAPI backend at `http://localhost:8000`:
 ### Setup
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Start the development server:
+
    ```bash
    npm run dev
    ```
@@ -40,6 +35,7 @@ The frontend communicates with the FastAPI backend at `http://localhost:8000`:
 ### Build
 
 To build for production:
+
 ```bash
 npm run build
 ```
@@ -65,6 +61,7 @@ src/
 ## Backend Compatibility
 
 This frontend is designed to work with the FastAPI backend that provides:
+
 - File upload and analysis endpoints
 - CORS configuration for localhost:5173
 - Support for Excel and CSV file formats
